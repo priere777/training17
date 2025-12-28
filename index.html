@@ -87,12 +87,12 @@
 
 <script>
     const catList = [
-        { id: "breakthrough", name: "開拓・突破力" },
-        { id: "stability",    name: "地盤・安定力" },
-        { id: "network",      name: "ご縁・繋がり" },
-        { id: "creative",     name: "才能・クリエイティブ" },
-        { id: "purification", name: "浄化・リセット" },
-        { id: "fortune",      name: "金運・ビジネス運" }
+       { id: "fortune",      name: "金運・ビジネス運", class: "cat-fortune" },      // 1: 真上
+        { id: "stability",    name: "地盤・安定力", class: "cat-stability" },        // 2: 右上
+        { id: "purification", name: "浄化・リセット", class: "cat-purification" },    // 3: 右下
+        { id: "creative",     name: "才能・クリエイティブ", class: "cat-creative" }, // 4: 真下（金運の対面）
+        { id: "breakthrough", name: "開拓・突破力", class: "cat-breakthrough" },    // 5: 左下
+        { id: "network",      name: "ご縁・繋がり", class: "cat-network" }           // 6: 左上
     ];
 
     let history = JSON.parse(localStorage.getItem('shrine_history') || '[]');
