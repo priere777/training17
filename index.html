@@ -17,21 +17,17 @@
         .shrine-photo-thumb { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; border: 1px solid #ddd; cursor: pointer; background: #f9f9f9; display: flex; align-items: center; justify-content: center; font-size: 1.2em; }
         .shrine-info { flex-grow: 1; }
         .shrine-name { font-weight: bold; font-size: 1.1em; margin-bottom: 3px; }
+        /* 💡 神様の名前用のスタイル */
+        .deity-info { font-size: 0.85em; color: #555; margin-bottom: 4px; }
         .visit-date { font-size: 0.8em; color: #888; }
         .category-tag { font-size: 0.7em; padding: 3px 8px; border-radius: 5px; color: white; margin-top: 5px; display: inline-block; }
 
-        /* 属性別カラー */
-        .cat-fortune { background: #f1c40f; }      /* 金運：黄 */
-        .cat-purification { background: #3498db; } /* 浄化：青 */
-        .cat-stability { background: #27ae60; }    /* 地盤：緑 */
-        .cat-network { background: #e91e63; }      /* ご縁：桃 */
-        .cat-creative { background: #9b59b6; }     /* 才能：紫 */
-        .cat-breakthrough { background: #e67e22; } /* 開拓：橙 */
+        .cat-fortune { background: #f1c40f; } .cat-purification { background: #3498db; } .cat-stability { background: #27ae60; }
+        .cat-network { background: #e91e63; } .cat-creative { background: #9b59b6; } .cat-breakthrough { background: #e67e22; }
 
         .btn-delete { color: #ccc; border: none; background: none; cursor: pointer; font-size: 1.2em; }
         .nav-link { display: block; text-align: center; margin-top: 25px; padding: 15px; background: var(--main-red); color: white; text-decoration: none; border-radius: 30px; font-weight: bold; box-shadow: 0 4px 10px rgba(142,29,29,0.3); }
 
-        /* 拡大モーダル */
         #photo-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; justify-content:center; align-items:center; }
         #photo-overlay img { max-width: 90%; max-height: 90%; border: 3px solid white; }
     </style>
@@ -50,12 +46,8 @@
     <div style="margin-top: 40px; border-top: 1px dashed #ccc; padding-top: 20px;">
         <p style="font-size: 0.8em; color: #888; text-align: center; margin-bottom: 10px;">データの管理</p>
         <div style="display: flex; gap: 10px; justify-content: center;">
-            <button onclick="exportData()" style="flex: 1; padding: 10px; font-size: 0.8em; background: #eee; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">
-                💾 データを保存
-            </button>
-            <button onclick="document.getElementById('importFile').click()" style="flex: 1; padding: 10px; font-size: 0.8em; background: #eee; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">
-                📂 データを復旧
-            </button>
+            <button onclick="exportData()" style="flex: 1; padding: 10px; font-size: 0.8em; background: #eee; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">💾 データを保存</button>
+            <button onclick="document.getElementById('importFile').click()" style="flex: 1; padding: 10px; font-size: 0.8em; background: #eee; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">📂 データを復旧</button>
         </div>
         <input type="file" id="importFile" style="display:none" onchange="importData(event)">
     </div>
@@ -64,7 +56,6 @@
 <div id="photo-overlay" onclick="this.style.display='none'"><img id="full-photo"></div>
 
 <script>
-    // 💡 順番を修正：1番目が真上、4番目が真下（金運 vs 才能）
     const catList = [
         { id: "fortune",      name: "金運・ビジネス運", class: "cat-fortune" },
         { id: "stability",    name: "地盤・安定力", class: "cat-stability" },
@@ -102,39 +93,46 @@
             const catInfo = catList.find(c => c.id === item.category);
             const div = document.createElement('div');
             div.className = 'history-item';
+            
+            // 💡 御祭神のデータがあれば表示する
+            const deityHtml = item.deity ? `<div class="deity-info">御祭神: ${item.deity}</div>` : '';
             const photoHtml = item.photo ? `<img src="${item.photo}" class="shrine-photo-thumb" onclick="zoomPhoto('${item.photo}')">` : `<div class="shrine-photo-thumb">⛩️</div>`;
-            div.innerHTML = `${photoHtml}<div class="shrine-info"><div class="shrine-name">${item.name}</div><div class="visit-date">${item.date || ''}</div><div class="category-tag ${catInfo?.class}">${catInfo?.name}</div></div><button class="btn-delete" onclick="deleteHistory(${realIndex})">×</button>`;
+            
+            div.innerHTML = `
+                ${photoHtml}
+                <div class="shrine-info">
+                    <div class="shrine-name">${item.name}</div>
+                    ${deityHtml}
+                    <div class="visit-date">${item.date || ''}</div>
+                    <div class="category-tag ${catInfo?.class}">${catInfo?.name}</div>
+                </div>
+                <button class="btn-delete" onclick="deleteHistory(${realIndex})">×</button>
+            `;
             listDiv.appendChild(div);
         });
     }
 
     window.zoomPhoto = function(src) { document.getElementById('full-photo').src = src; document.getElementById('photo-overlay').style.display = 'flex'; };
     window.deleteHistory = function(index) { if(confirm("この思い出を消してもいい？")) { history.splice(index, 1); localStorage.setItem('shrine_history', JSON.stringify(history)); renderAll(); } };
-
     window.exportData = function() {
         const data = localStorage.getItem('shrine_history');
         if (!data) return alert("保存するデータがありません");
         const blob = new Blob([data], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = 'my_shrine_data.json';
-        a.click();
+        a.href = url; a.download = 'my_shrine_data.json'; a.click();
     };
-
     window.importData = function(event) {
         const reader = new FileReader();
         reader.onload = function(e) {
             try {
                 const data = JSON.parse(e.target.result);
                 localStorage.setItem('shrine_history', JSON.stringify(data));
-                alert("データを復旧しました！");
-                location.reload();
+                alert("データを復旧しました！"); location.reload();
             } catch (err) { alert("正しいファイルを選んでね"); }
         };
         reader.readAsText(event.target.files[0]);
     };
-
     renderAll();
 </script>
 </body>
