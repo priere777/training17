@@ -3,96 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>デジタル参拝手帳</title>
+    <title>参拝記録ステータス</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --main-green: #2d5a27; --danger-red: #e74c3c; --bg-color: #f4f1e8; }
-        body { margin: 0; padding: 20px; font-family: "Sawarabi Mincho", serif; background: var(--bg-color); color: #333; }
-        .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 15px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); border: 1px solid #e0dccf; }
+        :root { --main-red: #8e1d1d; --gold: #d4af37; }
+        body { margin: 0; padding: 20px; font-family: "Hiragino Mincho ProN", serif; background: #f4f1ea; color: #333; }
+        .container { max-width: 550px; margin: 0 auto; background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #e0dcd0; }
         
-        /* グラフエリア */
-        .chart-container { width: 100%; margin-bottom: 30px; background: #fff; padding: 10px; border-radius: 10px; }
-        h1 { text-align: center; color: var(--main-green); font-size: 1.4em; letter-spacing: 0.1em; }
-        h2 { font-size: 1.1em; color: var(--main-green); border-bottom: 2px solid var(--main-green); padding-bottom: 5px; margin-top: 40px; }
+        .chart-container { background: radial-gradient(circle, #fff 0%, #fafafa 100%); border-radius: 15px; padding: 10px; margin-bottom: 20px; }
+        h2 { font-size: 1.1em; color: var(--main-red); border-bottom: 2px solid var(--main-red); padding-bottom: 5px; margin-top: 30px; }
 
-        /* カード型履歴デザイン */
-        .history-list { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
-        .history-item { 
-            background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 15px;
-            display: flex; justify-content: space-between; position: relative;
-            transition: transform 0.2s;
-        }
-        .history-item:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-        
-        .shrine-info { display: flex; flex-direction: column; gap: 5px; }
-        .shrine-name { font-weight: bold; font-size: 1.1em; color: #222; }
-        .deity-name { font-size: 0.85em; color: #777; font-style: italic; }
-        .visit-date { font-size: 0.8em; color: #aaa; }
+        .history-item { padding: 15px 0; border-bottom: 1px solid #eee; display: flex; gap: 15px; align-items: center; }
+        .shrine-photo-thumb { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; border: 1px solid #ddd; cursor: pointer; background: #f9f9f9; display: flex; align-items: center; justify-content: center; font-size: 1.2em; }
+        .shrine-info { flex-grow: 1; }
+        .shrine-name { font-weight: bold; font-size: 1.1em; margin-bottom: 3px; }
+        .visit-date { font-size: 0.8em; color: #888; }
+        .category-tag { font-size: 0.7em; padding: 3px 8px; border-radius: 5px; color: white; margin-top: 5px; display: inline-block; }
 
-        .right-area { display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; }
-        .category-tag { 
-            font-size: 0.7em; padding: 4px 10px; border-radius: 20px; 
-            background: #eef5ee; color: var(--main-green); border: 1px solid var(--main-green);
-        }
+        /* 属性別カラー */
+        .cat-fortune { background: #f1c40f; }      /* 金運：黄 */
+        .cat-purification { background: #3498db; } /* 浄化：青 */
+        .cat-stability { background: #27ae60; }    /* 地盤：緑 */
+        .cat-network { background: #e91e63; }      /* ご縁：桃 */
+        .cat-creative { background: #9b59b6; }     /* 才能：紫 */
+        .cat-breakthrough { background: #e67e22; } /* 開拓：橙 */
 
-        /* 削除ボタン */
-        .btn-delete {
-            background: none; border: none; color: #ddd; cursor: pointer; font-size: 1.3em;
-            position: absolute; top: 10px; right: 10px; line-height: 1;
-        }
-        .btn-delete:hover { color: var(--danger-red); }
+        .btn-delete { color: #ccc; border: none; background: none; cursor: pointer; font-size: 1.2em; }
+        .nav-link { display: block; text-align: center; margin-top: 25px; padding: 15px; background: var(--main-red); color: white; text-decoration: none; border-radius: 30px; font-weight: bold; box-shadow: 0 4px 10px rgba(142,29,29,0.3); }
 
-        /* 写真表示（復活！） */
-        .photo-container { margin-top: 10px; cursor: pointer; overflow: hidden; border-radius: 8px; width: 100px; height: 100px; }
-        .card-photo { width: 100%; height: 100%; object-fit: cover; transition: 0.3s; }
-        .card-photo:hover { transform: scale(1.1); }
-
-        /* ナビゲーション */
-        .nav-link { 
-            display:block; text-align:center; margin-top:30px; background: var(--main-green);
-            color: white; text-decoration:none; font-weight:bold; padding: 15px; border-radius: 50px;
-        }
-        .backup-area { margin-top: 50px; padding: 20px; background: #fdfdfd; border: 1px dashed #ccc; border-radius: 10px; text-align: center; }
-        .btn-backup { background: #999; color: white; border: none; padding: 8px 16px; border-radius: 5px; font-size: 0.8em; cursor: pointer; margin: 5px; }
-
-        /* ズーム用モーダル（復活！） */
-        #zoom-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center; }
-        #zoom-img { max-width: 90%; max-height: 90%; border: 5px solid white; border-radius: 5px; }
+        /* 拡大モーダル */
+        #photo-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; justify-content:center; align-items:center; }
+        #photo-overlay img { max-width: 90%; max-height: 90%; border: 3px solid white; }
     </style>
 </head>
 <body>
+
 <div class="container">
-    <h1>⛩️ デジタル参拝手帳</h1>
+    <h1 style="text-align:center; color:var(--main-red); letter-spacing: 0.2em;">参拝帖</h1>
     <div class="chart-container"><canvas id="statusChart"></canvas></div>
+    
+    <h2>参拝の記録</h2>
+    <div id="history-list"></div>
+    
+    <a href="status.html" class="nav-link">📍 参拝を記録しにいく</a>
 
-    <h2>現在の徳ステータス</h2>
-    <table style="width:100%; border-collapse: collapse; margin-top:10px;">
-        <tbody id="status-body"></tbody>
-    </table>
-
-    <h2>参拝のあゆみ（履歴）</h2>
-    <div id="history-list" class="history-list"></div>
-
-    <a href="status.html" class="nav-link">📍 参拝を記録しに行く</a>
-
-    <div class="backup-area">
-        <p style="font-size:0.75em; color:#888;">データのバックアップ</p>
-        <button class="btn-backup" onclick="exportData()">💾 保存する</button>
-        <button class="btn-backup" onclick="document.getElementById('importFile').click()">📂 復旧する</button>
+    <div style="margin-top: 40px; border-top: 1px dashed #ccc; padding-top: 20px;">
+        <p style="font-size: 0.8em; color: #888; text-align: center; margin-bottom: 10px;">データの管理</p>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button onclick="exportData()" style="flex: 1; padding: 10px; font-size: 0.8em; background: #eee; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">
+                💾 データを保存
+            </button>
+            <button onclick="document.getElementById('importFile').click()" style="flex: 1; padding: 10px; font-size: 0.8em; background: #eee; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">
+                📂 データを復旧
+            </button>
+        </div>
         <input type="file" id="importFile" style="display:none" onchange="importData(event)">
     </div>
 </div>
 
-<div id="zoom-modal" onclick="this.style.display='none'"><img id="zoom-img"></div>
+<div id="photo-overlay" onclick="this.style.display='none'"><img id="full-photo"></div>
 
 <script>
+    // 💡 順番を修正：1番目が真上、4番目が真下（金運 vs 才能）
     const catList = [
-       { id: "fortune",      name: "金運・ビジネス運", class: "cat-fortune" },      // 1: 真上
-        { id: "stability",    name: "地盤・安定力", class: "cat-stability" },        // 2: 右上
-        { id: "purification", name: "浄化・リセット", class: "cat-purification" },    // 3: 右下
-        { id: "creative",     name: "才能・クリエイティブ", class: "cat-creative" }, // 4: 真下（金運の対面）
-        { id: "breakthrough", name: "開拓・突破力", class: "cat-breakthrough" },    // 5: 左下
-        { id: "network",      name: "ご縁・繋がり", class: "cat-network" }           // 6: 左上
+        { id: "fortune",      name: "金運・ビジネス運", class: "cat-fortune" },
+        { id: "stability",    name: "地盤・安定力", class: "cat-stability" },
+        { id: "purification", name: "浄化・リセット", class: "cat-purification" },
+        { id: "creative",     name: "才能・クリエイティブ", class: "cat-creative" },
+        { id: "breakthrough", name: "開拓・突破力", class: "cat-breakthrough" },
+        { id: "network",      name: "ご縁・繋がり", class: "cat-network" }
     ];
 
     let history = JSON.parse(localStorage.getItem('shrine_history') || '[]');
@@ -110,85 +89,52 @@
                 labels: catList.map(c => c.name),
                 datasets: [{
                     data: catList.map(c => stats[c.id]),
-                    backgroundColor: 'rgba(45, 90, 39, 0.2)', borderColor: 'rgba(45, 90, 39, 1)', borderWidth: 2
+                    backgroundColor: 'rgba(142, 29, 29, 0.15)', borderColor: 'var(--main-red)', borderWidth: 2, pointBackgroundColor: 'var(--gold)'
                 }]
             },
-            options: {
-                scales: { r: { min: 0, suggestedMax: 5, ticks: { display: false } } },
-                plugins: { legend: { display: false } }
-            }
-        });
-
-        const tbody = document.getElementById('status-body');
-        tbody.innerHTML = '';
-        catList.forEach(c => {
-            const row = document.createElement('tr');
-            const stars = '★'.repeat(Math.min(stats[c.id], 5)) + '☆'.repeat(Math.max(0, 5 - stats[c.id]));
-            row.innerHTML = `<td style="padding:10px; border-bottom:1px solid #eee;"><b>${c.name}</b></td>
-                             <td style="padding:10px; border-bottom:1px solid #eee; color:#f1c40f;">${stars}</td>`;
-            tbody.appendChild(row);
+            options: { scales: { r: { min: 0, suggestedMax: 5, grid: { color: '#e0dcd0' } } }, plugins: { legend: { display: false } } }
         });
 
         const listDiv = document.getElementById('history-list');
         listDiv.innerHTML = '';
         [...history].reverse().forEach((item, index) => {
             const realIndex = history.length - 1 - index;
-            const catName = catList.find(c => c.id === item.category)?.name || "";
-            
-            // 写真がある場合のみHTMLを作成
-            const photoHtml = item.photo ? `
-                <div class="photo-container" onclick="zoomPhoto('${item.photo}')">
-                    <img src="${item.photo}" class="card-photo">
-                </div>` : '';
-
+            const catInfo = catList.find(c => c.id === item.category);
             const div = document.createElement('div');
             div.className = 'history-item';
-            div.innerHTML = `
-                <div class="shrine-info">
-                    <div class="shrine-name">${item.name}</div>
-                    <div class="deity-name">${item.deity ? '主祭神: ' + item.deity : ''}</div>
-                    <div class="visit-date">${item.date || '日付未登録'}</div>
-                    ${photoHtml}
-                </div>
-                <div class="right-area">
-                    <button class="btn-delete" onclick="deleteHistory(${realIndex})">×</button>
-                    <div class="category-tag">${catName}</div>
-                </div>
-            `;
+            const photoHtml = item.photo ? `<img src="${item.photo}" class="shrine-photo-thumb" onclick="zoomPhoto('${item.photo}')">` : `<div class="shrine-photo-thumb">⛩️</div>`;
+            div.innerHTML = `${photoHtml}<div class="shrine-info"><div class="shrine-name">${item.name}</div><div class="visit-date">${item.date || ''}</div><div class="category-tag ${catInfo?.class}">${catInfo?.name}</div></div><button class="btn-delete" onclick="deleteHistory(${realIndex})">×</button>`;
             listDiv.appendChild(div);
         });
     }
 
-    window.zoomPhoto = function(src) {
-        const modal = document.getElementById('zoom-modal');
-        document.getElementById('zoom-img').src = src;
-        modal.style.display = 'flex';
-    };
+    window.zoomPhoto = function(src) { document.getElementById('full-photo').src = src; document.getElementById('photo-overlay').style.display = 'flex'; };
+    window.deleteHistory = function(index) { if(confirm("この思い出を消してもいい？")) { history.splice(index, 1); localStorage.setItem('shrine_history', JSON.stringify(history)); renderAll(); } };
 
-    window.deleteHistory = function(index) {
-        if(confirm("この思い出を削除してもいいですか？")) {
-            history.splice(index, 1);
-            localStorage.setItem('shrine_history', JSON.stringify(history));
-            renderAll();
-        }
-    };
-
-    function exportData() {
-        const blob = new Blob([localStorage.getItem('shrine_history')], {type: 'application/json'});
+    window.exportData = function() {
+        const data = localStorage.getItem('shrine_history');
+        if (!data) return alert("保存するデータがありません");
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'my_shrine_diary.json';
+        a.href = url;
+        a.download = 'my_shrine_data.json';
         a.click();
-    }
-    function importData(event) {
+    };
+
+    window.importData = function(event) {
         const reader = new FileReader();
-        reader.onload = e => { 
-            localStorage.setItem('shrine_history', e.target.result); 
-            history = JSON.parse(e.target.result);
-            renderAll(); 
+        reader.onload = function(e) {
+            try {
+                const data = JSON.parse(e.target.result);
+                localStorage.setItem('shrine_history', JSON.stringify(data));
+                alert("データを復旧しました！");
+                location.reload();
+            } catch (err) { alert("正しいファイルを選んでね"); }
         };
         reader.readAsText(event.target.files[0]);
-    }
+    };
+
     renderAll();
 </script>
 </body>
