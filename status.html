@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>参拝記録マッピング</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        :root { --main-red: #8e1d1d; }
+        body { margin: 0; padding: 0; font-family: sans-serif; background: #f4f1ea; display: flex; flex-direction: column; height: 100vh; }
+        #map { width: 100%; height: 40vh; flex-shrink: 0; border-bottom: 3px solid var(--main-red); background: #eee; }
+        .ui-panel { flex-grow: 1; overflow-y: auto; padding: 20px; box-sizing: border-box; background: white; }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; font-size: 0.8em; color: #666; margin-bottom: 5px; font-weight: bold; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        .btn-save { background: var(--main-red); color: white; border: none; padding: 15px; border-radius: 30px; font-weight: bold; width: 100%; cursor: pointer; font-size: 1.1em; }
+        .nav-link { display: block; text-align: center; margin-top: 15px; color: #666; text-decoration: none; font-size: 0.9em; padding-bottom: 30px; }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div class="ui-panel">
+    <div class="input-group">
+        <label>⛩️ 神社名</label>
+        <input type="text" id="shrine-name" placeholder="例：小網" oninput="autoCheck()">
+    </div>
+    <div class="input-group">
+        <label>📅 参拝日</label>
+        <input type="date" id="visit-date">
+    </div>
+    <div class="input-group">
+        <label>📸 写真（御朱印や境内の様子）</label>
+        <input type="file" id="shrine-photo" accept="image/*">
+    </div>
+    <div class="input-group">
+        <label>🙏 御祭神 / 属性</label>
+        <input type="text" id="deity-name" placeholder="神様の名前" style="margin-bottom: 8px;">
+        <select id="shrine-cat">
+            <option value="fortune">金運・ビジネス運</option>
+            <option value="purification">浄化・リセット</option>
+            <option value="stability">地盤・安定力</option>
+            <option value="network">ご縁・繋がり</option>
+            <option value="creative">才能・クリエイティブ</option>
+            <option value="breakthrough">開拓・突破力</option>
+        </select>
+    </div>
+    <button class="btn-save" onclick="saveVisit()">🙏 参拝を記録する</button>
+    <a href="index.html" class="nav-link">➔ ステータス画面へ戻る</a>
+</div>
+
+<script>
+    const colors = {
+        fortune: "#f1c40f",      // 金運：黄
+        purification: "#3498db", // 浄化：青
+        stability: "#27ae60",    // 地盤：緑
+        network: "#e91e63",      // ご縁：桃
+        creative: "#9b59b6",     // 才能：紫
+        breakthrough: "#e67e22"  // 開拓：橙
+    };
+
+    const shrineMaster = {
+        "明治神宮": { cat: "stability", deity: "明治天皇", lat: 35.6763, lng: 139.6993 },
+        "小網神社": { cat: "fortune", deity: "倉稲魂神", lat: 35.6853, lng: 139.7792 },
+        "神田明神": { cat: "purification", deity: "大己貴命", lat: 35.7020, lng: 139.7680 }
+    };
+
+    var map;
+    document.getElementById('visit-date').valueAsDate = new Date();
+
+    window.onload = function() {
+        map = L.map('map').setView([35.6895, 139.6917], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        
+        showHistoryMarkers();
+        setTimeout(() => { map.invalidateSize(); }, 400);
+    };
+
+    // 💡 履歴を色付きの丸（サークル）で表示する
+    function showHistoryMarkers() {
+        const history = JSON.parse(localStorage.getItem('shrine_history') || '[]');
+        history.forEach(item => {
+            const master = Object.entries(shrineMaster).find(([k]) => item.name.includes(k.replace(/神社|大社|神宮/g, '')));
+            if (master) {
+                const color = colors[item.category] || "#888";
+                L.circleMarker([master[1].lat, master[1].lng], {
+                    radius: 10,
+                    fillColor: color,
+                    color: "#fff",
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(map).bindPopup(`${item.name}<br>${item.date}`);
+            }
+        });
+    }
+
+    function autoCheck() {
+        let name = document.getElementById('shrine-name').value;
+        const match = Object.entries(shrineMaster).find(([k]) => k.includes(name.replace(/神社|大社|神宮/g, '')));
+        if (match && name.length > 1) {
+            document.getElementById('deity-name').value = match[1].deity;
+            document.getElementById('shrine-cat').value = match[1].cat;
+            map.flyTo([match[1].lat, match[1].lng], 15);
+        }
+    }
+
+    function saveVisit() {
+        const name = document.getElementById('shrine-name').value;
+        if (!name) return alert("名前を入れてね");
+        const photoFile = document.getElementById('shrine-photo').files[0];
+        if (photoFile) {
+            const reader = new FileReader();
+            reader.onload = function(e) { completeSave(e.target.result); };
+            reader.readAsDataURL(photoFile);
+        } else {
+            completeSave(null);
+        }
+    }
+
+    function completeSave(photoData) {
+        let history = JSON.parse(localStorage.getItem('shrine_history') || '[]');
+        history.push({
+            name: document.getElementById('shrine-name').value,
+            date: document.getElementById('visit-date').value,
+            deity: document.getElementById('deity-name').value,
+            category: document.getElementById('shrine-cat').value,
+            photo: photoData
+        });
+        localStorage.setItem('shrine_history', JSON.stringify(history));
+        alert("色付きピンで記録したよ！");
+        location.href = "index.html";
+    }
+</script>
+</body>
+</html>
